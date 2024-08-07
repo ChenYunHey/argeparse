@@ -1,0 +1,24 @@
+-Dkubernetes.cluster-id=flink-ck-13
+-Dmetrics.reporter.promgateway.jobName=flink-ck-05
+-Dkubernetes.taskmanager.labels=lakesoul-job:flink-ck-04
+-Dkubernetes.jobmanager.labels=lakesoul-job:flink-ck-05
+-Dkubernetes.namespace=lake-czads
+-Dkubernetes.service-account=lake-iam-001
+-Dcontainerized.master.env.LAKESOUL_PG_USERNAME=lake-iam-001
+-Dcontainerized.master.env.HADOOP_USER_NAME=lake-iam-001
+-Dcontainerized.master.env.LAKESOUL_PG_PASSWORD=Bymkta91hjiz
+-Dcontainerized.master.env.LAKESOUL_CURRENT_DOMAIN=lake-czads
+-Dcontainerized.taskmanager.env.LAKESOUL_PG_USERNAME=lake-iam-001
+-Dcontainerized.taskmanager.env.HADOOP_USER_NAME=lake-iam-001
+-Dcontainerized.taskmanager.env.LAKESOUL_PG_PASSWORD=Bymkta91hjiz
+-Dcontainerized.taskmanager.env.LAKESOUL_CURRENT_DOMAIN=lake-czads
+-Dtaskmanager.numberOfTaskSlots=2
+-Dtaskmanager.memory.process.size=2048m
+-Dtaskmanager.memory.task.off-heap.size=128m
+-Dkubernetes.pod-template-file.jobmanager=/tmp/flink-podTemplate-flink-ck-01.yaml
+-Dkubernetes.pod-template-file.taskmanager=/tmp/flink-podTemplate-flink-ck-01.yaml
+-s hdfs:///lakesoul-bucket/checkpoint/lake-czads/flink-ck-15/ed74a5d64c55f269f987852235f55347/chk-11/
+-c org.apache.flink.lakesoul.entry.sql.SubmitMain local:///opt/flink/artifacts/lakesoul-flink-1.17-2.5.3.jar --job.checkpoint_interval 30000
+--language sql
+--sql_file_path hdfs:///lakesoul-bucket/data_dev_tmp/lake-czads/flink-ck-01.txt
+--flink.checkpoint hdfs:///lakesoul-bucket/checkpoint/lake-czads/flink-ck-15

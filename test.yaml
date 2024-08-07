@@ -1,0 +1,95 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: mysql-lakesoul
+  namespace: flink-k8s-operator
+spec:
+  image: sealos.hub:5000/flink-benchmark:1.5
+  flinkVersion: v1_17
+  flinkConfiguration:
+    taskmanager.numberOfTaskSlots: "2"
+    state.savepoints.dir: hdfs:///flink-savepoints
+    state.checkpoints.dir: hdfs:///flink-checkpoints
+    restart-strategy: fixed-delay
+    restart-strategy.fixed-delay.attempts: "3"
+    restart-strategy.fixed-delay.delay: 10 s
+    kubernetes.operator.job.restart.failed: "false"
+    kubernetes.operator.observer.progress-check.interval: 10 s
+    kubernetes.operator.checkpoint.trigger.grace-period : "30000"
+    kubernetes.decorator.hadoop-conf-mount.enabled: "false"
+    high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    high-availability.storageDir: hdfs:///flink-data/ha
+    kubernetes.operator.jm-deployment-recovery.enabled: "false"
+    containerized.master.env.LAKESOUL_PG_DRIVER: com.lakesoul.shaded.org.postgresql.Driver
+    containerized.master.env.LAKESOUL_PG_USERNAME: postgres
+    containerized.master.env.LAKESOUL_PG_PASSWORD: 'zkz9s7m4'
+    containerized.master.env.LAKESOUL_PG_URL: jdbc:postgresql://pgcluster-postgresql.default.svc.cluster.local:5432/postgres?stringtype=unspecified
+    containerized.taskmanager.env.LAKESOUL_PG_DRIVER: com.lakesoul.shaded.org.postgresql.Driver
+    containerized.taskmanager.env.LAKESOUL_PG_USERNAME: postgres
+    containerized.taskmanager.env.LAKESOUL_PG_PASSWORD: 'zkz9s7m4'
+    containerized.taskmanager.env.LAKESOUL_PG_URL: jdbc:postgresql://pgcluster-postgresql.default.svc.cluster.local:5432/postgres?stringtype=unspecified
+  serviceAccount: flink
+  logConfiguration:
+    log4j-console.properties: |+
+      rootLogger.level = ERROR
+  jobManager:
+    replicas: 1
+    resource:
+      memory: "2048m"
+      cpu: 1
+  taskManager:
+    resource:
+      memory: "2048m"
+      cpu: 1
+  podTemplate:
+    spec:
+      initContainers:
+          - name: lakesoul-flink
+            image: sealos.hub:5000/lakesoul-flink:2.6.0
+            command:
+              - /bin/sh
+              - -c
+              - cp lakesoul-flink-1.17-2.6.0-SNAPSHOT.jar /flink-artifact/
+            volumeMounts:
+              - mountPath: /flink-artifact
+                name: flink-artifact
+      containers:
+        - name: flink-main-container
+          env:
+            - name: TZ
+              value: Asia/Shanghai
+            - name: LAKESOUL_PG_DRIVER
+              value: com.lakesoul.shaded.org.postgresql.Driver
+            - name: LAKESOUL_PG_USERNAME
+              value: postgres
+            - name: LAKESOUL_PG_PASSWORD
+              value: 'zkz9s7m4'
+            - name: LAKESOUL_PG_URL
+              value: jdbc:postgresql://pgcluster-postgresql.default.svc.cluster.local:5432/postgres?stringtype=unspecified
+            - name: HADOOP_CONF_DIR
+              value: /etc/hadoop/conf
+            - name: HADOOP_HOME
+              value: /opt/hadoop
+          volumeMounts:
+          - name: hadoop-config
+            mountPath: /etc/hadoop/conf
+          - name: flink-artifact
+            mountPath: /opt/flink/lib/lakesoul
+      volumes:
+      - name: flink-artifact
+        emptyDir: {}
+      - name: hadoop-config
+        configMap:
+          name: flink-configmap
+          items:
+          - key: hdfs-site.xml
+            path: hdfs-site.xml
+          - key: core-site.xml
+            path: core-site.xml
+
+  job:
+    jarURI: local:///opt/flink/benchmarkTest-1.0-SNAPSHOT.jar
+    entryClass: "com.lakesoul.benchmark.TestSavepoint"
+    parallelism: 2
+    upgradeMode: last-state
+    state: running

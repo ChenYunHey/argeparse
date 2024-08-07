@@ -1,0 +1,69 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkDeployment
+metadata:
+  name: flink-ck-13
+  namespace: lake-czads
+spec:
+  flinkConfiguration:
+    containerized.taskmanager.env.LAKESOUL_CURRENT_DOMAIN: lake-czads
+    high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    high-availability.storageDir: file:///flink-data/ha
+    kubernetes.cluster-id: flink-ck-13
+    kubernetes.decorator.hadoop-conf-mount.enabled: 'false'
+    kubernetes.namespace: lake-czads
+    kubernetes.operator.jm-deployment-recovery.enabled: 'false'
+    kubernetes.operator.job.restart.failed: 'false'
+    kubernetes.pod-template-file.jobmanager: /tmp/flink-podTemplate-flink-ck-01.yaml
+    kubernetes.pod-template-file.taskmanager: /tmp/flink-podTemplate-flink-ck-01.yaml
+    kubernetes.service-account: lake-iam-001
+    restart-strategy: fixed-delay
+    restart-strategy.fixed-delay.attempts: '3'
+    restart-strategy.fixed-delay.delay: 10 s
+    state.checkpoints.dir: file:///flink-data/checkpoints
+    state.savepoints.dir: file:///flink-data/savepoints
+    taskmanager.memory.process.size: 2048m
+    taskmanager.memory.task.off-heap.size: 128m
+    taskmanager.numberOfTaskSlots: '2'
+  flinkVersion: v1_17
+  image: sealos.hub:5000/flink-benchmark:1.5
+  job:
+    args:
+    - --job.checkpoint_interval
+    - '30000'
+    - --language
+    - sql
+    - --sql_file_path
+    - hdfs:///lakesoul-bucket/data_dev_tmp/lake-czads/flink-ck-01.txt
+    - --flink.checkpoint
+    - hdfs:///lakesoul-bucket/checkpoint/lake-czads/flink-ck-15
+    entryClass: org.apache.flink.lakesoul.entry.sql.SubmitMain
+    jarURI: local:///opt/flink/artifacts/lakesoul-flink-1.17-2.5.3.jar
+    state: running
+    upgradeMode: last-state
+  jobManager:
+    replicas: 1
+    resource:
+      cpu: 1
+      memory: null
+  podTemplate:
+    containers:
+    - name: flink-main-container
+      volumeMounts:
+      - mountPath: /etc/hadoop/conf
+        name: hadoop-config
+    volumes:
+    - emptyDir: {}
+      name: flink-artifact
+    - configMap:
+        items:
+        - key: hdfs-site.xml
+          path: hdfs-site.xml
+        - key: core-site.xml
+          path: core-site.xml
+        name: flink-configmap
+      name: hadoop-config
+  serviceAccount: lake-iam-001
+  taskManager:
+    resource:
+      cpu: 1
+      memory: 2048m
