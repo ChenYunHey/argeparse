@@ -8,6 +8,8 @@ def change_base_yaml(key, value, yaml_data):
         yaml_data['spec']['serviceAccount'] = value
     elif key == "kubernetes.cluster-id":
         yaml_data['metadata']['name'] = value
+    else:
+        yaml_data['spec']['flinkConfiguration'][key] = value
 
 
 def fill_D_parameters(equal_params):
@@ -18,7 +20,7 @@ def fill_D_parameters(equal_params):
             key = str(equal_param)
             value = equal_params.get(equal_param)
             change_base_yaml(key, value, yaml_data, )
-            yaml_data['spec']['flinkConfiguration'][key] = value
+            # yaml_data['spec']['flinkConfiguration'][key] = value
     with open("base.yaml", "w", encoding='utf-8') as updated_file:
         try:
             yaml.dump(yaml_data, updated_file, default_style=False)

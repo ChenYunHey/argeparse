@@ -8,14 +8,13 @@ spec:
     containerized.taskmanager.env.LAKESOUL_CURRENT_DOMAIN: lake-czads
     high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
     high-availability.storageDir: file:///flink-data/ha
-    kubernetes.cluster-id: flink-ck-13
     kubernetes.decorator.hadoop-conf-mount.enabled: 'false'
-    kubernetes.namespace: lake-czads
+    kubernetes.operator.checkpoint.trigger.grace-period: '30000'
     kubernetes.operator.jm-deployment-recovery.enabled: 'false'
     kubernetes.operator.job.restart.failed: 'false'
+    kubernetes.operator.observer.progress-check.interval: 10 s
     kubernetes.pod-template-file.jobmanager: /tmp/flink-podTemplate-flink-ck-01.yaml
     kubernetes.pod-template-file.taskmanager: /tmp/flink-podTemplate-flink-ck-01.yaml
-    kubernetes.service-account: lake-iam-001
     restart-strategy: fixed-delay
     restart-strategy.fixed-delay.attempts: '3'
     restart-strategy.fixed-delay.delay: 10 s
@@ -38,30 +37,51 @@ spec:
     - hdfs:///lakesoul-bucket/checkpoint/lake-czads/flink-ck-15
     entryClass: org.apache.flink.lakesoul.entry.sql.SubmitMain
     jarURI: local:///opt/flink/artifacts/lakesoul-flink-1.17-2.5.3.jar
+    parallelism: 2
     state: running
     upgradeMode: last-state
   jobManager:
     replicas: 1
     resource:
       cpu: 1
-      memory: null
+      memory: 2048m
   podTemplate:
-    containers:
-    - name: flink-main-container
-      volumeMounts:
-      - mountPath: /etc/hadoop/conf
+    spec:
+      containers:
+      - env:
+        - name: TZ
+          value: Asia/Shanghai
+        - name: HADOOP_CONF_DIR
+          value: /etc/hadoop/conf
+        - name: HADOOP_HOME
+          value: /opt/hadoop
+        name: flink-main-container
+        volumeMounts:
+        - mountPath: /etc/hadoop/conf
+          name: hadoop-config
+        - mountPath: /opt/flink/lib/lakesoul
+          name: flink-artifact
+      initContainers:
+      - command:
+        - /bin/sh
+        - -c
+        - cp lakesoul-flink-1.17-2.6.0-SNAPSHOT.jar /flink-artifact/
+        image: sealos.hub:5000/lakesoul-flink:2.6.0
+        name: lakesoul-flink
+        volumeMounts:
+        - mountPath: /flink-artifact
+          name: flink-artifact
+      volumes:
+      - emptyDir: {}
+        name: flink-artifact
+      - configMap:
+          items:
+          - key: hdfs-site.xml
+            path: hdfs-site.xml
+          - key: core-site.xml
+            path: core-site.xml
+          name: flink-configmap
         name: hadoop-config
-    volumes:
-    - emptyDir: {}
-      name: flink-artifact
-    - configMap:
-        items:
-        - key: hdfs-site.xml
-          path: hdfs-site.xml
-        - key: core-site.xml
-          path: core-site.xml
-        name: flink-configmap
-      name: hadoop-config
   serviceAccount: lake-iam-001
   taskManager:
     resource:
