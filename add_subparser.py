@@ -68,7 +68,8 @@ def execute_run(args):
     yaml_fill.fill_D_parameters(define_params,job_name_yaml)
     yaml_fill.fill_user_parameters(user_params,job_name_yaml)
     yaml_fill.fill_class_parameters(class_params,job_name_yaml)
-    os.system("kubectl create -f base.yaml")
+    command = "kubectl create -f "+job_name_yaml+" "
+    os.system(command)
 
 
 def execute_suspended(args):
