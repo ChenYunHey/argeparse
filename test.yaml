@@ -58,14 +58,6 @@ spec:
           env:
             - name: TZ
               value: Asia/Shanghai
-            - name: LAKESOUL_PG_DRIVER
-              value: com.lakesoul.shaded.org.postgresql.Driver
-            - name: LAKESOUL_PG_USERNAME
-              value: postgres
-            - name: LAKESOUL_PG_PASSWORD
-              value: 'zkz9s7m4'
-            - name: LAKESOUL_PG_URL
-              value: jdbc:postgresql://pgcluster-postgresql.default.svc.cluster.local:5432/postgres?stringtype=unspecified
             - name: HADOOP_CONF_DIR
               value: /etc/hadoop/conf
             - name: HADOOP_HOME

@@ -1,4 +1,7 @@
 import argparse
+
+import yaml
+
 import yaml_fill
 import os
 
@@ -41,20 +44,30 @@ def execute_run(args):
     user_params = user_params[2:]
     define_params = {}
     job_info = {}
+    job_name_yaml = ""
     if args.D:
         for item in args.D:
             key, value = item.split('=', 1)
             if key == "kubernetes.cluster-id":
                 job_info[key] = value
+                job_name_yaml = value
             elif key == "kubernetes.namespace":
                 job_info[key] = value
+                job_name_yaml = job_name_yaml+"_"+value+".yaml"
             define_params[key] = value
+    with open("base.yaml","r",encoding="utf-8") as f:
+        base_yaml = yaml.safe_load(f.read())
+    with open(job_name_yaml,"w",encoding="utf-8") as nf:
+        try:
+            yaml.dump(base_yaml, nf, default_style=False)
+        except yaml.YAMLError as exec:
+            print(exec)
     check_key_exists(define_params, "high-availability.storageDir")
     check_key_exists(define_params, "state.savepoints.dir")
     check_key_exists(define_params, "state.checkpoints.dir")
-    yaml_fill.fill_D_parameters(define_params)
-    yaml_fill.fill_user_parameters(user_params)
-    yaml_fill.fill_class_parameters(class_params)
+    yaml_fill.fill_D_parameters(define_params,job_name_yaml)
+    yaml_fill.fill_user_parameters(user_params,job_name_yaml)
+    yaml_fill.fill_class_parameters(class_params,job_name_yaml)
     os.system("kubectl create -f base.yaml")
 
 

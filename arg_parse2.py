@@ -43,32 +43,32 @@ def check_key_exists(data, key):
     return True
 
 
-if __name__ == "__main__":
-    parsed_args = parse_arguments()
-    basemessage = parsed_args.get("base_massage")
-    # 打印最终字典
-    job_state = parsed_args.get("job_state")
-    if job_state == "run":
-        user_params, class_params, define_params = parsed_args.get("user_params"), parsed_args.get(
-            "class_params"), parsed_args.get("define_params")
-        yaml_fill.fill_D_parameters(define_params)
-        yaml_fill.fill_user_parameters(user_params)
-        yaml_fill.fill_class_parameters(class_params)
-        os.system("kubectl create -f base.yaml")
-    elif job_state == "suspended":
-        command = (
-            "kubectl -n "+basemessage.get("kubernetes.namespace")+" patch flinkdeployments.flink.apache.org  "+basemessage.get("kubernetes.cluster-id")+
-            " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"suspended\"}]'"
-        )
-        os.system(command)
-    elif job_state == "restart":
-        command = (
-            "kubectl -n " + basemessage.get("kubernetes.namespace") + " patch flinkdeployments.flink.apache.org  " + basemessage.get(
-            "kubernetes.cluster-id") + " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"running\"}]'"
-        )
-        os.system(command)
-    elif job_state == "delete":
-        os.system("kubectl delete -f base.yaml")
-        print("job has been deleted")
-    else:
-        raise KeyError(f"Parameter '{job_state}' is invalid,support run/suspended/restart/delete.")
+# if __name__ == "__main__":
+#     parsed_args = parse_arguments()
+#     basemessage = parsed_args.get("base_massage")
+#     # 打印最终字典
+#     job_state = parsed_args.get("job_state")
+#     if job_state == "run":
+#         user_params, class_params, define_params = parsed_args.get("user_params"), parsed_args.get(
+#             "class_params"), parsed_args.get("define_params")
+#         yaml_fill.fill_D_parameters(define_params)
+#         yaml_fill.fill_user_parameters(user_params)
+#         yaml_fill.fill_class_parameters(class_params)
+#         os.system("kubectl create -f base.yaml")
+#     elif job_state == "suspended":
+#         command = (
+#             "kubectl -n "+basemessage.get("kubernetes.namespace")+" patch flinkdeployments.flink.apache.org  "+basemessage.get("kubernetes.cluster-id")+
+#             " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"suspended\"}]'"
+#         )
+#         os.system(command)
+#     elif job_state == "restart":
+#         command = (
+#             "kubectl -n " + basemessage.get("kubernetes.namespace") + " patch flinkdeployments.flink.apache.org  " + basemessage.get(
+#             "kubernetes.cluster-id") + " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"running\"}]'"
+#         )
+#         os.system(command)
+#     elif job_state == "delete":
+#         os.system("kubectl delete -f base.yaml")
+#         print("job has been deleted")
+#     else:
+#         raise KeyError(f"Parameter '{job_state}' is invalid,support run/suspended/restart/delete.")
