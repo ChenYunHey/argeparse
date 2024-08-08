@@ -102,6 +102,8 @@ def execute_delete(args):
     )
     print(command)
     os.system(command)
+    rm_command = "rm "+job_name+"_"+job_namespace+".yaml"
+    os.system(rm_command)
 
 
 def check_key_exists(data, key):
