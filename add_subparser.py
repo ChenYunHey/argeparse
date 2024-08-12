@@ -32,8 +32,14 @@ def parse_arguments():
     delete_command = subparsers.add_parser('delete', help="delete the job.")
     delete_command.add_argument("-jobNamespace", required=True)
     delete_command.add_argument("-jobName", required=True)
-
     delete_command.set_defaults(func=execute_delete)
+
+    # 查询flink job状态
+    status_command = subparsers.add_parser('status', help="Query task status")
+    status_command.add_argument("-jobNamespace", required=True)
+    status_command.add_argument("-jobName", required=True)
+    # delete_command.set_defaults(func=)
+
     args = parser.parse_args()
     args.func(args)
 
@@ -44,6 +50,7 @@ def execute_run(args):
     user_params = user_params[2:]
     define_params = {}
     job_info = {}
+    # deployment yaml
     job_name_yaml = ""
     if args.D:
         for item in args.D:
@@ -62,21 +69,28 @@ def execute_run(args):
             yaml.dump(base_yaml, nf, default_style=False)
         except yaml.YAMLError as exec:
             print(exec)
+
+    job_yaml = "session-"+job_name_yaml
+    yaml_fill.fill_flink_conf_yaml("flink-conf.yaml","base.yaml",job_name_yaml)
     check_key_exists(define_params, "high-availability.storageDir")
     check_key_exists(define_params, "state.savepoints.dir")
     check_key_exists(define_params, "state.checkpoints.dir")
     yaml_fill.fill_D_parameters(define_params,job_name_yaml)
-    yaml_fill.fill_user_parameters(user_params,job_name_yaml)
-    yaml_fill.fill_class_parameters(class_params,job_name_yaml)
-    command = "kubectl create -f "+job_name_yaml+" "
-    os.system(command)
+    yaml_fill.fill_user_parameters(user_params,"base_job.yaml",job_yaml)
+    yaml_fill.fill_class_parameters(class_params,job_yaml)
+    yaml_fill.fill_base_job_yaml(job_info,job_yaml)
+    yaml_fill.fill_flink_podTemplate("flink-podTemplate.yaml",job_name_yaml)
+    command_start_deploy = "kubectl create -f "+job_name_yaml+" "
+    command_start_job = "kubectl create -f "+job_yaml+" "
+    os.system(command_start_deploy)
+    os.system(command_start_job)
 
 
 def execute_suspended(args):
     job_name = args.jobName
     job_namespace = args.jobNamespace
     command = (
-            "kubectl -n " + job_namespace + " patch flinkdeployments.flink.apache.org  " + job_name +
+            "kubectl -n " + job_namespace + " patch flinksessionjobs.flink.apache.org  " + job_name +
             " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"suspended\"}]'"
     )
     print(command)
@@ -87,7 +101,7 @@ def execute_restart(args):
     job_name = args.jobName
     job_namespace = args.jobNamespace
     command = (
-            "kubectl -n " + job_namespace + " patch flinkdeployments.flink.apache.org  " + job_name +
+            "kubectl -n " + job_namespace + " patch flinksessionjobs.flink.apache.org  " + job_name +
             " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"running\"}]'"
     )
     print(command)
@@ -97,20 +111,45 @@ def execute_restart(args):
 def execute_delete(args):
     job_name = args.jobName
     job_namespace = args.jobNamespace
-    command = (
+    command_delete_deploy = (
             "kubectl -n " + job_namespace + " delete flinkdeployments.flink.apache.org " + job_name
     )
-    print(command)
-    os.system(command)
+    command_delete_job = (
+            "kubectl -n " + job_namespace + " delete  flinksessionjobs.flink.apache.org" + job_name+"-session"
+    )
+    print(command_delete_deploy)
+    os.system(command_delete_deploy)
+    print(command_delete_job)
+    os.system(command_delete_job)
     rm_command = "rm "+job_name+"_"+job_namespace+".yaml"
     os.system(rm_command)
 
+def query_status(args):
+    job_name = args.jobName
+    job_namespace = args.jobNamespace
+    command_status = (
+        "kubectl get flinksessionjobs.flink.apache.org "+ job_name + "-session -n "+job_namespace+" -o json | jq -r '.status.jobStatus.state'"
+    )
+    job_status = os.system(command_status)
+    print(job_status)
+    if job_status == "RUNNING":
+        print(job_status)
+    command_id = (
+        "kubectl get flinksessionjobs.flink.apache.org " + job_name + "-session -n " + job_namespace + " -o json | jq -r '.status.jobStatus.jobId'"
+    )
 
+    job_id = os.system(command_id)
+    if job_status == "FAILED":
+        port_forward_command = "kubectl port-forward svc/"+job_name+"-rest 8081:8081 -n" + job_namespace
+        os.system(port_forward_command)
+        root_exceptions_url = "http://localhost:8081/jobs/"+job_id
+        exception_context = "curl -s" + root_exceptions_url + " | jq | grep root"
+        exception_context = os.system(exception_context)
+        print(exception_context)
 def check_key_exists(data, key):
     if key not in data:
         raise KeyError(f"Key '{key}' is missing from the dictionary.")
     return True
-
 
 if __name__ == "__main__":
     parse_arguments()

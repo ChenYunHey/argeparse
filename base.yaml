@@ -4,67 +4,27 @@ metadata:
   name:
   namespace:
 spec:
-  flinkConfiguration:
-    kubernetes.decorator.hadoop-conf-mount.enabled: 'false'
-    kubernetes.operator.jm-deployment-recovery.enabled: 'false'
-    kubernetes.operator.job.restart.failed: 'false'
-    kubernetes.operator.observer.progress-check.interval: 10 s
-    restart-strategy: fixed-delay
-    restart-strategy.fixed-delay.attempts: '3'
-    restart-strategy.fixed-delay.delay: 10 s
+  image:
   flinkVersion: v1_17
-  image: sealos.hub:5000/flink-benchmark:1.5
-  job:
-    args:
-    entryClass:
-    jarURI:
-    parallelism: 2
-    state: running
-    upgradeMode: last-state
+  flinkConfiguration:
+   # scheduler-mode: REACTIVE
+    restart-strategy: fixed-delay
+    restart-strategy.fixed-delay.attempts: "3"
+    restart-strategy.fixed-delay.delay: 10 s
+    kubernetes.operator.job.restart.failed: "false"
+    kubernetes.decorator.hadoop-conf-mount.enabled: "false"
+    high-availability.type: kubernetes
+    high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
+    kubernetes.operator.jm-deployment-recovery.enabled: "false"
+  serviceAccount:
+  podTemplate:
+    spec:
   jobManager:
     replicas: 1
     resource:
+      memory:
       cpu: 1
-      memory: 2048m
-  podTemplate:
-    spec:
-      containers:
-      - env:
-        - name: TZ
-          value: Asia/Shanghai
-        - name: HADOOP_CONF_DIR
-          value: /etc/hadoop/conf
-        - name: HADOOP_HOME
-          value: /opt/hadoop
-        name: flink-main-container
-        volumeMounts:
-        - mountPath: /etc/hadoop/conf
-          name: hadoop-config
-        - mountPath: /opt/flink/lib/lakesoul
-          name: flink-artifact
-      initContainers:
-      - command:
-        - /bin/sh
-        - -c
-        - cp lakesoul-flink-1.17-2.6.0-SNAPSHOT.jar /flink-artifact/
-        image: sealos.hub:5000/lakesoul-flink:2.6.0
-        name: lakesoul-flink
-        volumeMounts:
-        - mountPath: /flink-artifact
-          name: flink-artifact
-      volumes:
-      - emptyDir: {}
-        name: flink-artifact
-      - configMap:
-          items:
-          - key: hdfs-site.xml
-            path: hdfs-site.xml
-          - key: core-site.xml
-            path: core-site.xml
-          name: flink-configmap
-        name: hadoop-config
-  serviceAccount:
   taskManager:
     resource:
+      memory:
       cpu: 1
-      memory: 2048m

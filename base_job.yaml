@@ -1,0 +1,13 @@
+apiVersion: flink.apache.org/v1beta1
+kind: FlinkSessionJob
+metadata:
+  namespace:
+  name:
+spec:
+  deploymentName:
+  job:
+    jarURI:
+    entryClass:
+    parallelism: 2
+    upgradeMode: savepoint
+    state: running
