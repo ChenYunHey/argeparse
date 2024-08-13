@@ -21,7 +21,7 @@ def change_base_yaml(key, value, yaml_data):
     elif key == "kubernetes.taskManager.resource.memory":
         yaml_data['spec']['taskManager']['resource']['memory'] = value
     elif key == "kubernetes.job.parallelism":
-        yaml_data['spec']['job']['parallelism'] = int(value)
+        print()
     else:
         yaml_data['spec']['flinkConfiguration'][key] = value
 
@@ -137,10 +137,12 @@ def fill_base_job_yaml(job_info,job_yaml):
         job_data = yaml.safe_load(f.read())
         for key,value in job_info.items():
             if key == "kubernetes.cluster-id":
-                job_data['spec']['deploymentName'] = value+"-session"
-                job_data['metadata']['name'] = value
+                job_data['spec']['deploymentName'] = value
+                job_data['metadata']['name'] = value + "-session"
             elif key == "kubernetes.namespace":
                 job_data["metadata"]["namespace"] = value
+            elif key == "kubernetes.job.parallelism":
+                job_data["spec"]["job"]["parallelism"] = int(value)
     with open(job_yaml,"w",encoding="utf-8") as updated_file:
         try:
             yaml.dump(job_data,updated_file,default_style=False)

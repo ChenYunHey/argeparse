@@ -38,7 +38,7 @@ def parse_arguments():
     status_command = subparsers.add_parser('status', help="Query task status")
     status_command.add_argument("-jobNamespace", required=True)
     status_command.add_argument("-jobName", required=True)
-    delete_command.set_defaults(func=query_status)
+    status_command.set_defaults(func=query_status)
 
     args = parser.parse_args()
     args.func(args)
@@ -61,6 +61,8 @@ def execute_run(args):
             elif key == "kubernetes.namespace":
                 job_info[key] = value
                 job_name_yaml = job_name_yaml+"_"+value+".yaml"
+            elif key == "kubernetes.job.parallelism":
+                job_info[key] = value
             define_params[key] = value
     with open("base.yaml","r",encoding="utf-8") as f:
         base_yaml = yaml.safe_load(f.read())
@@ -115,7 +117,7 @@ def execute_delete(args):
             "kubectl -n " + job_namespace + " delete flinkdeployments.flink.apache.org " + job_name
     )
     command_delete_job = (
-            "kubectl -n " + job_namespace + " delete  flinksessionjobs.flink.apache.org" + job_name+"-session"
+            "kubectl -n " + job_namespace + " delete  flinksessionjobs.flink.apache.org" + job_name
     )
 
     print(command_delete_job)
