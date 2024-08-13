@@ -13,6 +13,7 @@ spec:
     restart-strategy.fixed-delay.delay: 10 s
     kubernetes.operator.job.restart.failed: "false"
     kubernetes.decorator.hadoop-conf-mount.enabled: "false"
+    execution.attached: "true"
     high-availability.type: kubernetes
     high-availability: org.apache.flink.kubernetes.highavailability.KubernetesHaServicesFactory
     kubernetes.operator.jm-deployment-recovery.enabled: "false"

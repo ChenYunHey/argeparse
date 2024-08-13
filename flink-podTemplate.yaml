@@ -2,55 +2,63 @@ kind: Pod
 metadata:
   name: jobmanager-pod-template
 spec:
-  initContainers:
-    - name: artifacts-fetcher
-      image: swr.cn-southwest-2.myhuaweicloud.com/dmetasoul-repo/minio/mc
-      env:
-        - name: WORKSPACE
-          valueFrom:
-            fieldRef:
-              fieldPath: metadata.namespace
-      command:
-        - sh
-        - -c
-        - |
-          mc alias set myminio http://minio-svc.lakesoul-dashboard.svc:9000  minioadmin minioadmin
-          mc cp myminio/lakesoul-bucket/files/lakesoul-flink-1.17-2.6.0-1.jar /flink-artifact/
-          mc cp --recursive myminio/lakesoul-bucket/resource-manager/${WORKSPACE}/usrlib/ /flink-artifact/
-          mc cp --recursive myminio/lakesoul-bucket/files/flink-env/ /flink-venv/
-      volumeMounts:
-        - mountPath: /flink-artifact
-          name: flink-artifact
-        - mountPath: /flink-venv
-          name: flink-venv
-  containers:
-    # Do not change the main container name
-    - name: flink-main-container
-      env:
-      - name: HADOOP_HOME
-        value: /opt/hadoop
-      - name: FLINK_CONF_DIR
-        value: /opt/flink/conf
-      resources:
-        requests:
-          ephemeral-storage: 2048Mi
-        limits:
-          ephemeral-storage: 2048Mi
-      volumeMounts:
-        - mountPath: /opt/flink/artifacts
-          name: flink-artifact
-        - mountPath: /opt/flink/lib/lakesoul
-          name: flink-artifact
-        - mountPath: /opt/dashboard/work-dir/mysql
-          name: flink-venv
-        - name: ssl-certs
-          mountPath: /opt/dashboard/conf/certs
-          readOnly: true
-  volumes:
-    - name: flink-artifact
-      emptyDir: { }
-    - name: flink-venv
-      emptyDir: { }
-    - name: ssl-certs
-      secret:
-        secretName: kafka-tls-secret
+  spec:
+    initContainers:
+      - name: artifacts-fetcher
+        image: swr.cn-southwest-2.myhuaweicloud.com/dmetasoul-repo/minio/mc
+        env:
+          - name: WORKSPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+        command:
+          - sh
+          - -c
+          - |
+            mc alias set myminio http://minio-svc.lakesoul-dashboard.svc:9000  minioadmin minioadmin
+            mc cp myminio/lakesoul-bucket/files/lakesoul-flink-1.17-2.6.0-1.jar /flink-artifact/
+            mc cp --recursive myminio/lakesoul-bucket/resource-manager/${WORKSPACE}/usrlib/ /flink-artifact/
+            # mc cp --recursive myminio/lakesoul-bucket/resource-manager/${WORKSPACE}/usrprogram/flink-udf-1.0-SNAPSHOT.jar /flink-venv/
+            mc cp --recursive myminio/lakesoul-bucket/files/flink-env/ /flink-venv/
+        volumeMounts:
+          - mountPath: /flink-artifact
+            name: flink-artifact
+          - mountPath: /flink-venv
+            name: flink-venv
+    containers:
+      # Do not change the main container name
+      - name: flink-main-container
+        env:
+          - name: HADOOP_HOME
+            value: /opt/hadoop
+          - name: HADOOP_CONF_DIR
+            value: /etc/hadoop/conf
+          - name: FLINK_CONF_DIR
+            value: /opt/flink/conf
+        resources:
+          requests:
+            ephemeral-storage: 2048Mi
+          limits:
+            ephemeral-storage: 2048Mi
+        volumeMounts:
+          - name: hadoop-config
+            mountPath: /etc/hadoop/conf
+          - mountPath: /opt/flink/artifacts
+            name: flink-artifact
+          - mountPath: /opt/flink/lib/lakesoul
+            name: flink-artifact
+          - mountPath: /opt/dashboard/work-dir
+            name: flink-venv
+    volumes:
+      - name: flink-artifact
+        emptyDir: { }
+      - name: flink-venv
+        emptyDir: { }
+      - name: hadoop-config
+        configMap:
+          name: flink-configmap
+          items:
+            - key: hdfs-site.xml
+              path: hdfs-site.xml
+            - key: core-site.xml
+              path: core-site.xml

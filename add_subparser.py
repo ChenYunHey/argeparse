@@ -38,7 +38,7 @@ def parse_arguments():
     status_command = subparsers.add_parser('status', help="Query task status")
     status_command.add_argument("-jobNamespace", required=True)
     status_command.add_argument("-jobName", required=True)
-    # delete_command.set_defaults(func=)
+    delete_command.set_defaults(func=query_status)
 
     args = parser.parse_args()
     args.func(args)
@@ -91,7 +91,7 @@ def execute_suspended(args):
     job_namespace = args.jobNamespace
     command = (
             "kubectl -n " + job_namespace + " patch flinksessionjobs.flink.apache.org  " + job_name +
-            " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"suspended\"}]'"
+            "-session --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"suspended\"}]'"
     )
     print(command)
     os.system(command)
@@ -102,7 +102,7 @@ def execute_restart(args):
     job_namespace = args.jobNamespace
     command = (
             "kubectl -n " + job_namespace + " patch flinksessionjobs.flink.apache.org  " + job_name +
-            " --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"running\"}]'"
+            "-session --type='json' -p='[{\"op\": \"replace\", \"path\": \"/spec/job/state\", \"value\":\"running\"}]'"
     )
     print(command)
     os.system(command)
@@ -117,10 +117,11 @@ def execute_delete(args):
     command_delete_job = (
             "kubectl -n " + job_namespace + " delete  flinksessionjobs.flink.apache.org" + job_name+"-session"
     )
-    print(command_delete_deploy)
-    os.system(command_delete_deploy)
+
     print(command_delete_job)
     os.system(command_delete_job)
+    print(command_delete_deploy)
+    os.system(command_delete_deploy)
     rm_command = "rm "+job_name+"_"+job_namespace+".yaml"
     os.system(rm_command)
 

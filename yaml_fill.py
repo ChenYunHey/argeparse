@@ -33,17 +33,19 @@ def fill_flink_conf_yaml(flink_conf_yaml,yaml_path,job_name_yaml):
         yaml_data = yaml.safe_load(f.read())
         for key,value in flink_conf_yaml_data.items():
             if key == "jobmanager.memory.process.size":
-                yaml_data['spec']['jobManager']['resource']['memory'] = value
+                yaml_data['spec']['jobManager']['resource']['memory'] = str(value)
             elif key == "taskmanager.memory.process.size":
-                yaml_data['spec']['taskManager']['resource']['memory'] = value
+                yaml_data['spec']['taskManager']['resource']['memory'] = str(value)
             elif key == "kubernetes.container.image.ref":
-                yaml_data['spec']['image'] = value
+                yaml_data['spec']['image'] = str(value)
+            elif key == "kubernetes.namespace":
+                yaml_data['metadata']['namespace'] = value
             # elif key == "parallelism.default":
                 # yaml_data['spec']['job']['parallelism'] = int(value)
             elif key == "kubernetes.service-account":
-                yaml_data['spec']['serviceAccount'] = value
+                yaml_data['spec']['serviceAccount'] = str(value)
             else:
-                yaml_data['spec']['flinkConfiguration'][key] = value
+                yaml_data['spec']['flinkConfiguration'][key] = str(value)
     with open(job_name_yaml, "w",encoding="utf-8") as updated_file:
         try:
             yaml.dump(yaml_data, updated_file, default_style=False)
@@ -56,8 +58,8 @@ def fill_D_parameters(equal_params,yaml_path):
         for equal_param in equal_params:
             # 是否选择D开头的参数才写进去
             key = str(equal_param)
-            value = equal_params.get(equal_param)
-            change_base_yaml(key, value, yaml_data, )
+            value = str(equal_params.get(equal_param))
+            change_base_yaml(key, value, yaml_data)
             # yaml_data['spec']['flinkConfiguration'][key] = value
     with open(yaml_path, "w", encoding='utf-8') as updated_file:
         try:
