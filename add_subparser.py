@@ -135,7 +135,7 @@ def query_status(args) :
     # job_status=subprocess.call(["kubectl","get","flinksessionjobs.flink.apache.org",job_name,"-session","-n",job_namespace,"-o","json","|","jq","-r","'.status.jobStatus.state'"],shell=True)
     job_status = subprocess.run(
         ["kubectl", "get", "flinksessionjobs.flink.apache.org", job_name + "-session", "-n", job_namespace, "-o",
-         "json"],
+         "json","|","-r",".status.jobStatus.state'"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
