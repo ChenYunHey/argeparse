@@ -136,12 +136,14 @@ def query_status(args) :
     job_status = subprocess.run(
         ["kubectl", "get", "flinksessionjobs.flink.apache.org", job_name + "-session", "-n", job_namespace, "-o",
          "json"],
-        capture_output=True,
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
         text=True,
         check=True
     ).stdout.strip()
     job_id = subprocess.run(["kubectl","get","flinksessionjobs.flink.apache.org",job_name,"-session","-n",job_namespace,"-o","|","-jq","-r","'.status.jobStatus.jobId'"],
-                            capture_output=True,
+                            stdout=subprocess.PIPE,
+                            stderr=subprocess.PIPE,
                             text=True,
                             check=True,
                             shell=True).stdout.strip()
@@ -159,7 +161,8 @@ def query_status(args) :
         app_name = "app=" + job_name
         pod_names = subprocess.run(
             ["kubectl", "get", "pods", "-l", app_name, "-n", job_namespace, "-o", "jsonpath='{.items[*].metadata.name"],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             shell=True,
             text=True,
             check=True).stdout.strip()
@@ -171,7 +174,8 @@ def query_status(args) :
 
         exceptions_output = subprocess.run(
             ["curl", "-s", exception_uri],
-            capture_output=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
             text=True,
             check=True
         ).stdout
