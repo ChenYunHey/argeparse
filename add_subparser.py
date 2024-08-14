@@ -128,27 +128,54 @@ def execute_delete(args):
     rm_command = "rm "+job_name+"_"+job_namespace+".yaml"
     os.system(rm_command)
 
-def query_status(args):
+def query_status(args) :
     job_name = args.jobName
     job_namespace = args.jobNamespace
-    command_status = (
-        "kubectl get flinksessionjobs.flink.apache.org "+ job_name + "-session -n "+job_namespace+" -o json | jq -r '.status.jobStatus.state'"
-    )
-    job_status = os.system(command_status)
-    print(job_status)
+
+    # job_status=subprocess.call(["kubectl","get","flinksessionjobs.flink.apache.org",job_name,"-session","-n",job_namespace,"-o","json","|","jq","-r","'.status.jobStatus.state'"],shell=True)
+    job_status = subprocess.run(
+        ["kubectl", "get", "flinksessionjobs.flink.apache.org", job_name + "-session", "-n", job_namespace, "-o",
+         "json"],
+        capture_output=True,
+        text=True,
+        check=True
+    ).stdout.strip()
+    job_id = subprocess.run(["kubectl","get","flinksessionjobs.flink.apache.org",job_name,"-session","-n",job_namespace,"-o","|","-jq","-r","'.status.jobStatus.jobId'"],
+                            capture_output=True,
+                            text=True,
+                            check=True,
+                            shell=True).stdout.strip()
+
+    if job_status == "":
+        error=subprocess.call(["kubectl","-n",job_namespace,"get","flinksessionjobs.flink.apache.org",job_name,"-o","jsonpath='{.status.error}'"],shell=True)
+        print(error)
     if job_status == "RUNNING":
         print(job_status)
-    command_id = (
-        "kubectl get flinksessionjobs.flink.apache.org " + job_name + "-session -n " + job_namespace + " -o json | jq -r '.status.jobStatus.jobId'"
-    )
-
-    job_id = os.system(command_id)
+    # command_id = (
+    #     "kubectl get flinksessionjobs.flink.apache.org " + job_name + "-session -n " + job_namespace + " -o json | jq -r '.status.jobStatus.jobId'"
+    # )
     if job_status == "FAILED":
-        port_forward_command = "kubectl port-forward svc/"+job_name+"-rest 8081:8081 -n" + job_namespace
-        os.system(port_forward_command)
-        root_exceptions_url = "http://localhost:8081/jobs/"+job_id+"exceptions"
-        exception_context = "curl -s" + root_exceptions_url + " | jq | grep root"
-        os.system(exception_context)
+        print("有错误")
+        app_name = "app=" + job_name
+        pod_names = subprocess.run(
+            ["kubectl", "get", "pods", "-l", app_name, "-n", job_namespace, "-o", "jsonpath='{.items[*].metadata.name"],
+            capture_output=True,
+            shell=True,
+            text=True,
+            check=True).stdout.strip()
+        print(pod_names)
+        pod_name = str(pod_names).split(" ")[0]
+        print(pod_name)
+        subprocess.run(["kubectl", "-n", job_namespace, "exec", "-it", pod_name, "-- bash"], check=True)
+        exception_uri = f"https://{job_name}-rest.flink-k8s-operator.svc.cluster.local:8081/jobs/{job_id}/exceptions"
+
+        exceptions_output = subprocess.run(
+            ["curl", "-s", exception_uri],
+            capture_output=True,
+            text=True,
+            check=True
+        ).stdout
+        print(exceptions_output)
 
 def check_key_exists(data, key):
     if key not in data:
