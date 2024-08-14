@@ -147,7 +147,7 @@ def query_status(args) :
                             universal_newlines=True,
                             check=True,
                             shell=True).stdout.strip()
-
+    print(job_status)
     if job_status == "":
         error=subprocess.call(["kubectl","-n",job_namespace,"get","flinksessionjobs.flink.apache.org",job_name,"-o","jsonpath='{.status.error}'"],shell=True)
         print(error)
