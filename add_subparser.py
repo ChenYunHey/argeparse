@@ -1,4 +1,5 @@
 import argparse
+import subprocess
 
 import yaml
 
@@ -145,10 +146,10 @@ def query_status(args):
     if job_status == "FAILED":
         port_forward_command = "kubectl port-forward svc/"+job_name+"-rest 8081:8081 -n" + job_namespace
         os.system(port_forward_command)
-        root_exceptions_url = "http://localhost:8081/jobs/"+job_id
+        root_exceptions_url = "http://localhost:8081/jobs/"+job_id+"exceptions"
         exception_context = "curl -s" + root_exceptions_url + " | jq | grep root"
-        exception_context = os.system(exception_context)
-        print(exception_context)
+        os.system(exception_context)
+
 def check_key_exists(data, key):
     if key not in data:
         raise KeyError(f"Key '{key}' is missing from the dictionary.")

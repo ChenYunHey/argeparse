@@ -22,6 +22,8 @@ def change_base_yaml(key, value, yaml_data):
         yaml_data['spec']['taskManager']['resource']['memory'] = value
     elif key == "kubernetes.job.parallelism":
         print()
+    elif key == "kubernetes.container.image.ref":
+        yaml_data['spec']['image'] = value
     else:
         yaml_data['spec']['flinkConfiguration'][key] = value
 
