@@ -1,6 +1,6 @@
 import argparse
 import subprocess
-
+import json
 import yaml
 
 import yaml_fill
@@ -128,58 +128,83 @@ def execute_delete(args):
     rm_command = "rm "+job_name+"_"+job_namespace+".yaml"
     os.system(rm_command)
 
-def query_status(args) :
+
+def query_status(args):
     job_name = args.jobName
     job_namespace = args.jobNamespace
 
-    # job_status=subprocess.call(["kubectl","get","flinksessionjobs.flink.apache.org",job_name,"-session","-n",job_namespace,"-o","json","|","jq","-r","'.status.jobStatus.state'"],shell=True)
-    job_status = subprocess.run(
+    kubectl_process = subprocess.run(
         ["kubectl", "get", "flinksessionjobs.flink.apache.org", job_name + "-session", "-n", job_namespace, "-o",
-         "json","|","-r",".status.jobStatus.state'"],
+         "json"],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
         universal_newlines=True,
         check=True
-    ).stdout.strip()
-    job_id = subprocess.run(["kubectl","get","flinksessionjobs.flink.apache.org",job_name,"-session","-n",job_namespace,"-o","|","-jq","-r","'.status.jobStatus.jobId'"],
-                            stdout=subprocess.PIPE,
-                            stderr=subprocess.PIPE,
-                            universal_newlines=True,
-                            check=True,
-                            shell=True).stdout.strip()
+    )
+    jq_process = subprocess.run(
+        ["jq", "-r", ".status.jobStatus.state"],
+        input=kubectl_process.stdout,  # 将上一个命令的输出作为输入传递给 jq
+        stdout=subprocess.PIPE,  # 捕获标准输出
+        stderr=subprocess.PIPE,  # 捕获标准错误
+        universal_newlines=True,  # 将输出作为字符串处理
+        check=True  # 如果命令失败则引发异常
+    )
+    job_status = jq_process.stdout.strip()
+
+    jq_process = subprocess.run(
+        ["jq", "-r", ".status.jobStatus.jobId"],
+        input=kubectl_process.stdout,  # 将上一个命令的输出作为输入传递给 jq
+        stdout=subprocess.PIPE,  # 捕获标准输出
+        stderr=subprocess.PIPE,  # 捕获标准错误
+        universal_newlines=True,  # 将输出作为字符串处理
+        check=True  # 如果命令失败则引发异常
+    )
+    job_id = jq_process.stdout.strip()
     print(job_status)
-    if job_status == "":
-        error=subprocess.call(["kubectl","-n",job_namespace,"get","flinksessionjobs.flink.apache.org",job_name,"-o","jsonpath='{.status.error}'"],shell=True)
-        print(error)
+    if job_status == "null":
+        try:
+            result = subprocess.run(
+                ["kubectl", "-n", job_namespace, "get", "flinksessionjobs.flink.apache.org", f"f{job_name}-session", "-o",
+                 "jsonpath='{.status.error}'"],
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                universal_newlines=True,
+                check=True
+            )
+            # 输出 status.error 的值
+            error = result.stdout.strip()
+            print(f"Error: {error}")
+        except subprocess.CalledProcessError as e:
+            print(f"Command failed with error: {e.stderr}")
     if job_status == "RUNNING":
         print(job_status)
-    # command_id = (
-    #     "kubectl get flinksessionjobs.flink.apache.org " + job_name + "-session -n " + job_namespace + " -o json | jq -r '.status.jobStatus.jobId'"
-    # )
     if job_status == "FAILED":
-        print("有错误")
         app_name = "app=" + job_name
         pod_names = subprocess.run(
-            ["kubectl", "get", "pods", "-l", app_name, "-n", job_namespace, "-o", "jsonpath='{.items[*].metadata.name"],
+            ["kubectl", "get", "pods", "-l", app_name, "-n", job_namespace, "-o", "jsonpath={.items[*].metadata.name}"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
-            shell=True,
             universal_newlines=True,
             check=True
         ).stdout.strip()
-        print(pod_names)
-        pod_name = str(pod_names).split(" ")[0]
-        print(pod_name)
-        subprocess.run(["kubectl", "-n", job_namespace, "exec", "-it", pod_name, "-- bash"], check=True)
-        exception_uri = f"https://{job_name}-rest.flink-k8s-operator.svc.cluster.local:8081/jobs/{job_id}/exceptions"
 
-        exceptions_output = subprocess.run(
-            ["curl", "-s", exception_uri],
+        pod_name = str(pod_names).split(" ")[0]
+
+        subprocess.run(["kubectl", "-n", job_namespace, "exec", pod_name, "--", "bash"], check=True)
+        exception_url = f"http://{job_name}-rest.flink-k8s-operator.svc.cluster.local:8081/jobs/{job_id}/exceptions"
+        print("the job id is : " + job_id)
+        exception_result = subprocess.run(
+            ["kubectl", "-n", job_namespace, "exec", pod_name, "--", "bash", "-c", f"curl -s {exception_url}"],
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             universal_newlines=True,
-        ).stdout
-        print(exceptions_output)
+            check=True
+        )
+        root_exception = json.loads(exception_result.stdout)
+        exception = root_exception.get('root-exception', {})
+        return_info = {"job_state": "FAILED", "root_exceptions": exception}
+        return_info_json = json.dumps(return_info)
+        print(return_info_json)
 
 def check_key_exists(data, key):
     if key not in data:
