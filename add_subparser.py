@@ -6,6 +6,7 @@ import yaml_fill
 import os
 
 
+
 def parse_arguments():
     parser = argparse.ArgumentParser(description='Flink command line parser')
     subparsers = parser.add_subparsers(help="sub-command help")
